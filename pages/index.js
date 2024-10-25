@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from 'next/router';
+
 
 const questions = [
   {
@@ -31,6 +33,8 @@ export default function Home() {
   const [followUpQuestion, setFollowUpQuestion] = useState("");
   const [followUpAnswered, setFollowUpAnswered] = useState(false);
   const [modelLoaded, setModelLoaded] = useState(false);
+  const router = useRouter();
+
 
   useEffect(() => {
     const loadModel = async () => {
@@ -55,6 +59,47 @@ export default function Home() {
       ...prevResponses,
       [name]: value,
     }));
+  const handleNext = async () => {
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+      setFollowUpQuestion("");
+    }
+    else{
+      console.log("Assessment completed");
+      const prompt = `Based on the user's responses to the following questions, suggest some suitable careers:\n${Object.keys(responses).map(key => `Question: ${questions[parseInt(key.split('-')[1])].text}\nResponse: ${responses[key]}`).join('\n')}`;
+
+      try {
+        const response = await fetch('/api/promptLLM', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            prompt: prompt,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log("Suggested careers:", result.message);
+        router.push({
+          pathname: '/suggestedJobs', // Page to display the suggested jobs
+          query: { careers: result.message }, // Pass careers as query params
+        });
+      } catch (error) {
+        console.error('Error fetching career suggestions:', error);
+      }
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
+      setFollowUpQuestion("");
+    }
   };
 
   const handleSliderChange = (e) => {
