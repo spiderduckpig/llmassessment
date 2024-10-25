@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react";
+import { useRouter } from 'next/router';
+
 
 const questions = [
   {
@@ -25,6 +27,7 @@ export default function Home() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [responses, setResponses] = useState({});
   const [followUpQuestion, setFollowUpQuestion] = useState("");
+  const router = useRouter();
 
 
   useEffect(() => {
@@ -43,10 +46,39 @@ export default function Home() {
     loadModel();
   }, []);
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
       setFollowUpQuestion("");
+    }
+    else{
+      console.log("Assessment completed");
+      const prompt = `Based on the user's responses to the following questions, suggest some suitable careers:\n${Object.keys(responses).map(key => `Question: ${questions[parseInt(key.split('-')[1])].text}\nResponse: ${responses[key]}`).join('\n')}`;
+
+      try {
+        const response = await fetch('/api/promptLLM', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            prompt: prompt,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log("Suggested careers:", result.message);
+        router.push({
+          pathname: '/suggestedJobs', // Page to display the suggested jobs
+          query: { careers: result.message }, // Pass careers as query params
+        });
+      } catch (error) {
+        console.error('Error fetching career suggestions:', error);
+      }
     }
   };
 
@@ -153,7 +185,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={handleNext}
-                disabled={currentQuestionIndex === questions.length - 1}
+                // disabled={currentQuestionIndex === questions.length - 1}
                 className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded m-2"
               >
                 Next
