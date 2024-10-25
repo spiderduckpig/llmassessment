@@ -63,6 +63,7 @@ export default function Home() {
       ...responses,
       [name]: value,
     });
+    console.log("handleResponseChange", responses);
   };
 
   const handleSubmit = async (e) => {
@@ -92,6 +93,7 @@ export default function Home() {
     } catch (error) {
       console.error('Error fetching follow-up question:', error);
     }
+    // console.log("handleSubmit", responses);
   };
 
   return (
