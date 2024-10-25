@@ -7,7 +7,7 @@ export const loadModel = async () => {
     return { message: "Model is already loaded" };
   }
   await ollama.generate({
-    model: 'llama3.2',
+    model: 'phi3:mini',
     prompt: '',
     keep_alive: '10m'
   });
@@ -20,7 +20,7 @@ export const unloadModel = async () => {
     return { message: "No model is currently loaded" };
   }
   await ollama.generate({
-    model: 'llama3.2',
+    model: 'phi3:mini',
     prompt: '',
     keep_alive: 0
   });
@@ -31,14 +31,14 @@ export const unloadModel = async () => {
 export const promptLLM = async (prompt) => {
   if (!modelLoaded) {
     await ollama.generate({
-      model: 'llama3.2',
+      model: 'phi3:mini',
       prompt: '',
       keep_alive: '10m'
     });
     modelLoaded = true;
   }
   const response = await ollama.chat({
-    model: 'llama3.2',
+    model: 'phi3:mini',
     messages: [{ role: 'user', content: prompt }],
     keep_alive: '10m'
   });
