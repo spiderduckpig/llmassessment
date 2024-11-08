@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from 'next/router';
+import { useRouter } from "next/router";
 
 const questions = [
   {
@@ -30,7 +30,7 @@ export default function Home() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [responses, setResponses] = useState({});
   const [followUpQuestion, setFollowUpQuestion] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false); // Added state for submit button loading
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -53,35 +53,9 @@ export default function Home() {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
       setFollowUpQuestion("");
-    }
-    else {
+    } else {
       console.log("Assessment completed");
-      const prompt = `Based on the user's responses to the following questions, suggest some suitable careers:\n${Object.keys(responses).map(key => `Question: ${questions[parseInt(key.split('-')[1])].text}\nResponse: ${responses[key]}`).join('\n')}`;
-
-      try {
-        const response = await fetch('/api/promptLLM', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            prompt: prompt,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        console.log("Suggested careers:", result.message);
-        router.push({
-          pathname: '/suggestedJobs', // Page to display the suggested jobs
-          query: { careers: result.message }, // Pass careers as query params
-        });
-      } catch (error) {
-        console.error('Error fetching career suggestions:', error);
-      }
+      await fetchCareerSuggestions();
     }
   };
 
@@ -103,7 +77,7 @@ export default function Home() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true); // Set loading state
+    setIsSubmitting(true);
     const currentQuestion = questions[currentQuestionIndex].text;
     const userResponse = responses[`question-${currentQuestionIndex}`];
     const prompt = `Ask the user a follow-up question based on their response to the previous question:\nQuestion: ${currentQuestion}\nResponse: ${userResponse}`;
@@ -115,7 +89,7 @@ export default function Home() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          prompt: prompt, // Include the prompt with the question and response
+          prompt: prompt,
         }),
       });
 
@@ -128,7 +102,48 @@ export default function Home() {
     } catch (error) {
       console.error('Error fetching follow-up question:', error);
     } finally {
-      setIsSubmitting(false); // Reset loading state
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleFollowUpSubmit = () => {
+    setFollowUpQuestion("");
+    // You can handle the follow-up response here if needed
+  };
+
+  const fetchCareerSuggestions = async () => {
+    const prompt = `Based on the user's responses to the following questions, suggest some suitable careers:\n${Object.keys(responses)
+      .map((key) => {
+        const questionIndex = parseInt(key.split('-')[1]);
+        const question = questions[questionIndex].text;
+        const response = responses[key];
+        return `Question: ${question}\nResponse: ${response}`;
+      })
+      .join('\n')}`;
+
+    try {
+      const response = await fetch('/api/promptLLM', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: prompt,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log("Suggested careers:", result.message);
+      router.push({
+        pathname: '/suggestedJobs',
+        query: { careers: result.message },
+      });
+    } catch (error) {
+      console.error('Error fetching career suggestions:', error);
     }
   };
 
@@ -185,15 +200,17 @@ export default function Home() {
               />
             </div>
           )}
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className={`${
-              isSubmitting ? "bg-blue-300" : "bg-blue-500 hover:bg-blue-700"
-            } text-white font-bold py-2 px-4 rounded`}
-          >
-            {isSubmitting ? "Submitting..." : "Submit"}
-          </button>
+          {!followUpQuestion && (
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className={`${
+                isSubmitting ? "bg-blue-300" : "bg-blue-500 hover:bg-blue-700"
+              } text-white font-bold py-2 px-4 rounded`}
+            >
+              {isSubmitting ? "Submitting..." : "Submit"}
+            </button>
+          )}
 
           {followUpQuestion && (
             <div className="flex flex-col items-center mt-4">
@@ -208,6 +225,13 @@ export default function Home() {
                 className="border border-gray-300 p-3 w-full text-black rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 rows={4}
               />
+              <button
+                type="button"
+                onClick={handleFollowUpSubmit}
+                className="mt-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Submit Follow-Up
+              </button>
             </div>
           )}
 
@@ -235,7 +259,7 @@ export default function Home() {
             ) : (
               <button
                 type="button"
-                onClick={() => alert("All questions completed!")}
+                onClick={handleNext}
                 className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
               >
                 Finish
